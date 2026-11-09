@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>ระบบรายรับ–รายจ่าย แผนก IT | โรงพยาบาลอากาศอำนวย</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <!-- ส่วนหัวและโลโก้ของโรงพยาบาล -->
+  <header class="topbar">
+    <div class="brand">
+      <img class="brand-logo" src="./akat-amnuai-logo.png" alt="โรงพยาบาลอากาศอำนวย กระทรวงสาธารณสุข">
+      <div>
+        <p class="eyebrow">โรงพยาบาลอากาศอำนวย · จังหวัดสกลนคร</p>
+        <h1>ทะเบียนรายรับ–รายจ่าย แผนก IT</h1>
+      </div>
+    </div>
+    <div class="user-tools"><span id="user-label"></span><button id="logout-button" class="button secondary hidden" type="button">ออกจากระบบ</button></div>
+  </header>
+
+  <main class="container">
+    <!-- แสดงแบบฟอร์มล็อกอินจนกว่าจะมี session ที่ถูกต้อง -->
+    <section id="login-panel" class="panel login-panel hidden">
+      <h2>เข้าสู่ระบบ</h2>
+      <p class="muted">ใช้บัญชีที่ผู้ดูแลระบบจัดเตรียมให้</p>
+      <form id="login-form" class="form-grid">
+        <label>ชื่อผู้ใช้<input name="username" autocomplete="username" required maxlength="64"></label>
+        <label>รหัสผ่าน<input name="password" type="password" autocomplete="current-password" required></label>
+        <button class="button primary" type="submit">เข้าสู่ระบบ</button>
+      </form>
+      <p id="login-error" class="error" role="alert"></p>
+    </section>
+
+    <!-- เนื้อหาระบบจะแสดงหลังล็อกอินผ่าน API -->
+    <section id="app-panel" class="hidden">
+      <div class="summary-grid">
+        <article class="summary income"><span>รายรับสะสม</span><strong id="summary-income">฿0.00</strong></article>
+        <article class="summary expense"><span>รายจ่ายสะสม</span><strong id="summary-expense">฿0.00</strong></article>
+        <article class="summary balance"><span>คงเหลือสุทธิ</span><strong id="summary-balance">฿0.00</strong></article>
+      </div>
+
+      <section id="entry-panel" class="panel">
+        <div class="section-heading"><div><h2>บันทึกรายการ</h2><p class="muted">การยกเลิกรายการจะเก็บประวัติไว้ในระบบ</p></div></div>
+        <form id="entry-form" class="entry-grid">
+          <label>ประเภท<select name="type" required><option value="INCOME">รายรับ</option><option value="EXPENSE">รายจ่าย</option></select></label>
+          <label>วันที่<input name="date" type="date" required></label>
+          <label class="wide">รายการ / รายละเอียด<input name="title" required maxlength="500"></label>
+          <label>หมวดหมู่<input name="category" required maxlength="160" list="category-options"><datalist id="category-options"></datalist></label>
+          <label>จำนวนเงิน (บาท)<input name="amount" type="number" inputmode="decimal" min="0.01" max="999999999999.99" step="0.01" required></label>
+          <button class="button primary wide" type="submit">บันทึกรายการ</button>
+        </form>
+        <p id="entry-message" class="message" role="status"></p>
+      </section>
+
+      <section class="panel">
+        <div class="section-heading"><div><h2>บัญชีรายการ</h2><p class="muted">รายการที่ยกเลิกยังคงแสดงเพื่อการตรวจสอบ</p></div><div class="user-tools"><button id="audit-button" class="button secondary hidden" type="button">ประวัติการเปลี่ยนแปลง</button><button id="csv-button" class="button secondary" type="button">ส่งออก CSV</button></div></div>
+        <div class="filters"><input id="search-input" type="search" placeholder="ค้นหารายการหรือหมวดหมู่" aria-label="ค้นหา"><select id="type-filter" aria-label="กรองตามประเภท"><option value="ALL">ทุกประเภท</option><option value="INCOME">รายรับ</option><option value="EXPENSE">รายจ่าย</option></select><select id="status-filter" aria-label="กรองตามสถานะ"><option value="ALL">ทุกสถานะ</option><option value="ACTIVE">ใช้งาน</option><option value="VOID">ยกเลิก</option></select></div>
+        <div class="table-wrap"><table><thead><tr><th>วันที่</th><th>ประเภท</th><th>รายละเอียด</th><th>หมวดหมู่</th><th class="numeric">รายรับ</th><th class="numeric">รายจ่าย</th><th>สถานะ / ดำเนินการ</th></tr></thead><tbody id="ledger-body"><tr><td colspan="7">กำลังโหลด...</td></tr></tbody></table></div>
+      </section>
+      <section id="audit-panel" class="panel hidden">
+        <div class="section-heading"><div><h2>ประวัติการเปลี่ยนแปลง</h2><p class="muted">แสดง 1,000 เหตุการณ์ล่าสุด</p></div><button id="audit-close" class="button secondary" type="button">ปิด</button></div>
+        <div class="table-wrap"><table><thead><tr><th>เวลา</th><th>ผู้ใช้</th><th>การทำรายการ</th><th>เลขรายการ</th><th>รายละเอียด / เหตุผล</th></tr></thead><tbody id="audit-body"></tbody></table></div>
+      </section>
+      <p class="footnote">ข้อมูลบันทึกในฐานข้อมูลกลางของเซิร์ฟเวอร์โรงพยาบาล ผู้มีสิทธิ์ ADMIN/EDITOR บันทึกและยกเลิกรายการได้; VIEWER ดูข้อมูลได้</p>
+    </section>
+    <div id="toast" class="toast hidden" role="status"></div>
+  </main>
+</body>
+</html>

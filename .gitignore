@@ -1,0 +1,7 @@
+# ค่าลับสำหรับเซิร์ฟเวอร์
+.env
+# package/build และข้อมูลสำรองที่มีข้อมูลการเงิน
+node_modules/
+backups/
+*.dump
+*.sql

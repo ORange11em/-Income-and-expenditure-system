@@ -1,0 +1,6 @@
+# ไม่ใส่ของลับและไฟล์ build ลงใน Docker image
+node_modules
+.env
+.git
+archive/
+npm-debug.log

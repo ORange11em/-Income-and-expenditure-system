@@ -1,0 +1,10 @@
+{
+  "name": "akat-amnuai-it-ledger",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ระบบบันทึกรายรับรายจ่ายแผนก IT โรงพยาบาลอากาศอำนวย",
+  "main": "server.js",
+  "engines": { "node": ">=24" },
+  "scripts": { "start": "node server.js", "create-user": "node server.js create-user" },
+  "dependencies": { "pg": "8.16.3" }
+}

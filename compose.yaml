@@ -1,0 +1,45 @@
+services:
+  # PostgreSQL ไม่ publish port ออกสู่ host; แอปเชื่อมผ่าน network ภายใน Compose เท่านั้น
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: it_ledger
+      POSTGRES_USER: ledger_app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ledger_app -d it_ledger"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+    networks: [backend]
+
+  app:
+    # Node API และไฟล์หน้าเว็บ ถูก build จาก Dockerfile ในโฟลเดอร์นี้
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://ledger_app:${POSTGRES_PASSWORD}@db:5432/it_ledger
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    ports:
+      # ให้ reverse proxy บน host เข้าถึงได้ แต่ไม่เปิดตรงให้เครือข่ายผู้ใช้
+      - "127.0.0.1:3000:3000"
+    networks: [backend]
+
+volumes:
+  # เก็บข้อมูล DB ข้ามการ restart/rebuild container; ห้ามลบ volume โดยไม่มี backup
+  postgres_data:
+
+networks:
+  backend:

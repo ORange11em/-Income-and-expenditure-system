@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบรายรับ-รายจ่าย แผนก IT โรงพยาบาลอากาศอำนวย</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Sarabun', 'Inter', sans-serif;
+    }
+    .scrollbar-thin::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .scrollbar-thin::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    .hospital-logo {
+      display: block;
+      width: clamp(175px, 20vw, 220px);
+      height: 56px;
+      object-fit: cover;
+      object-position: center 50%;
+      flex: 0 0 auto;
+    }
+    .hospital-logo + div.w-10 { display: none; }
+    @media (max-width: 640px) {
+      .hospital-logo { width: min(190px, 60vw); height: 50px; }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Top Header -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <!-- ใช้ไฟล์โลโก้ที่อยู่ใน public/ ข้างโฟลเดอร์หน้าเว็บ -->
+        <img class="hospital-logo" src="../../public/akat-amnuai-logo.png" alt="ตราสัญลักษณ์โรงพยาบาลอากาศอำนวย">
+        <div class="w-10 h-10 rounded-xl bg-teal-600 flex items-center justify-center text-white shadow-sm shrink-0">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base sm:text-lg font-bold text-slate-900">ระบบรายรับ-รายจ่าย แผนก IT</h1>
+            <span class="hidden sm:inline-block text-xs font-semibold px-2 py-0.5 bg-teal-50 text-teal-700 border border-teal-200 rounded-full">จ.สกลนคร</span>
+          </div>
+          <p class="text-xs text-slate-500">กรอกรายรับ-รายจ่ายในจุดเดียว หักลบและสรุปยอดคงเหลืออัตโนมัติ</p>
+        </div>
+      </div>
+
+      <!-- Toolbar Actions -->
+      <div class="flex items-center gap-2">
+        <button id="btn-export-csv" type="button" class="text-xs bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-lg font-semibold transition shadow-sm">
+          ดาวน์โหลด Excel (CSV)
+        </button>
+        <button id="btn-export-json" type="button" class="text-xs bg-white border border-teal-300 hover:bg-teal-50 text-teal-800 px-3 py-1.5 rounded-lg font-semibold transition shadow-sm">สำรองข้อมูล (JSON)</button>
+        <input id="input-import-json" type="file" accept=".json,application/json" class="hidden">
+        <button id="btn-clear-all" type="button" class="text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3 py-1.5 rounded-lg font-semibold transition">
+          ล้างข้อมูล (เริ่ม 0 บาท)
+        </button>
+        <button id="btn-reset-demo" type="button" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg font-semibold transition">
+          นำเข้าไฟล์สำรอง
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 flex-1 space-y-6">
+
+    <!-- 1. SUMMARY CARDS: รายรับรวม - รายจ่ายรวม = คงเหลือสุทธิ -->
+    <section aria-label="สรุปยอดรายรับหักรายจ่าย">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <!-- รายรับรวม -->
+        <div class="bg-white rounded-2xl p-5 border-2 border-emerald-200 shadow-sm flex items-center justify-between">
+          <div>
+            <span class="inline-block text-xs font-bold px-2.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 mb-1">1. รายรับทั้งหมด (+)</span>
+            <h2 id="kpi-total-income" class="text-2xl sm:text-3xl font-bold text-emerald-700">฿0.00</h2>
+            <p id="kpi-income-count" class="text-xs text-slate-500 mt-1">0 รายการ</p>
+          </div>
+          <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-2xl shrink-0">+</div>
+        </div>
+
+        <!-- รายจ่ายรวม -->
+        <div class="bg-white rounded-2xl p-5 border-2 border-rose-200 shadow-sm flex items-center justify-between">
+          <div>
+            <span class="inline-block text-xs font-bold px-2.5 py-0.5 rounded-md bg-rose-100 text-rose-800 mb-1">2. หัก รายจ่ายทั้งหมด (&minus;)</span>
+            <h2 id="kpi-total-expense" class="text-2xl sm:text-3xl font-bold text-rose-600">฿0.00</h2>
+            <p id="kpi-expense-count" class="text-xs text-slate-500 mt-1">0 รายการ (คิดเป็น 0%)</p>
+          </div>
+          <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold text-2xl shrink-0">&minus;</div>
+        </div>
+
+        <!-- สรุปคงเหลือสุทธิ -->
+        <div class="bg-gradient-to-br from-teal-700 to-teal-900 rounded-2xl p-5 text-white shadow-md flex items-center justify-between">
+          <div>
+            <span class="inline-block text-xs font-bold px-2.5 py-0.5 rounded-md bg-white/20 text-white mb-1">= สรุปคงเหลือสุทธิ (รายรับ &minus; รายจ่าย)</span>
+            <h2 id="kpi-net-balance" class="text-2xl sm:text-3xl font-bold text-white">฿0.00</h2>
+            <p id="kpi-remain-pct" class="text-xs text-teal-100 mt-1">คงเหลือ 100% ของงบที่ได้รับ</p>
+          </div>
+          <div class="w-12 h-12 rounded-2xl bg-white/15 text-white flex items-center justify-center font-bold text-2xl shrink-0">=</div>
+        </div>
+      </div>
+
+      <!-- Progress Bar -->
+      <div class="mt-3 bg-white rounded-xl p-3.5 border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between text-xs mb-1.5">
+          <span class="font-bold text-slate-700">สัดส่วนการใช้งบแผนก IT โรงพยาบาลอากาศอำนวย</span>
+          <div class="flex items-center gap-4 font-semibold">
+            <span class="text-rose-600">ใช้จ่ายไปแล้ว: <span id="bar-spent-pct">0%</span></span>
+            <span class="text-emerald-600">คงเหลือ: <span id="bar-remain-pct">100%</span></span>
+          </div>
+        </div>
+        <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden flex">
+          <div id="bar-spent" class="bg-rose-500 h-full transition-all duration-500" style="width: 0%"></div>
+          <div id="bar-remain" class="bg-emerald-500 h-full transition-all duration-500" style="width: 100%"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. SINGLE UNIFIED ENTRY FORM (ที่กรอกที่เดียว เลือกรายรับ/รายจ่าย + กราฟสรุป) -->
+    <section class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+      
+      <!-- ฟอร์มกรอกที่เดียว (3 คอลัมน์) -->
+      <div class="lg:col-span-3 bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+          <div>
+            <h3 class="text-base font-bold text-slate-900">ฟอร์มกรอกข้อมูล (ที่เดียวจบ)</h3>
+            <p class="text-xs text-slate-500">เลือกประเภท "รายรับ" หรือ "รายจ่าย" แล้วกรอกเฉพาะช่องสำคัญด้านล่าง</p>
+          </div>
+        </div>
+
+        <form id="single-entry-form" class="space-y-4">
+          <!-- ปุ่มสลับ รายจ่าย / รายรับ -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5">1. เลือกประเภทรายการ *</label>
+            <div class="grid grid-cols-2 gap-3">
+              <button type="button" id="btn-type-expense" class="py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm border-2 border-rose-600 bg-rose-600 text-white shadow-sm flex items-center justify-center gap-2 transition">
+                <span>&minus; กรอกรายจ่าย (หักงบ)</span>
+              </button>
+              <button type="button" id="btn-type-income" class="py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm border-2 border-slate-200 bg-slate-50 text-slate-600 hover:bg-emerald-50 hover:border-emerald-300 flex items-center justify-center gap-2 transition">
+                <span>+ กรอกรายรับ (รับงบจาก รพ.)</span>
+              </button>
+            </div>
+            <input type="hidden" id="entry-type" value="EXPENSE">
+          </div>
+
+          <!-- ชื่อรายการ & จำนวนเงิน -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="sm:col-span-2">
+              <label for="entry-title" class="block text-xs font-bold text-slate-700 mb-1">2. รายการ / รายละเอียด *</label>
+              <input id="entry-title" type="text" required placeholder="เช่น ซื้อคอมพิวเตอร์ห้องตรวจ OPD, ค่าบำรุงรักษาระบบ HOSxP" class="w-full text-sm border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500">
+            </div>
+            <div>
+              <label for="entry-amount" class="block text-xs font-bold text-slate-700 mb-1">3. จำนวนเงิน (บาท) *</label>
+              <input id="entry-amount" type="number" min="1" step="0.01" required placeholder="0.00" class="w-full text-sm font-bold border border-slate-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500">
+            </div>
+          </div>
+
+          <!-- หมวดหมู่ & วันที่ -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label for="entry-category" class="block text-xs font-bold text-slate-700 mb-1">4. หมวดหมู่ *</label>
+              <select id="entry-category" required class="w-full text-sm border border-slate-300 rounded-xl px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500">
+                <!-- Populated dynamically based on Income vs Expense -->
+              </select>
+            </div>
+            <div>
+              <label for="entry-date" class="block text-xs font-bold text-slate-700 mb-1">5. วันที่บันทึก *</label>
+              <input id="entry-date" type="date" required class="w-full text-sm border border-slate-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500">
+            </div>
+          </div>
+
+          <button id="btn-submit-entry" type="submit" class="w-full py-3 px-4 bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm rounded-xl shadow-sm transition">
+            บันทึกรายจ่ายและหักยอดคงเหลือทันที
+          </button>
+        </form>
+      </div>
+
+      <!-- กราฟและตารางสรุปหมวดหมู่ (2 คอลัมน์) -->
+      <div class="lg:col-span-2 bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between">
+        <div>
+          <h3 class="text-base font-bold text-slate-900">สรุปยอดรายจ่ายแยกตามหมวดงาน IT</h3>
+          <p class="text-xs text-slate-500 mb-3">แผนก IT โรงพยาบาลอากาศอำนวย</p>
+          <div class="relative h-48 w-full">
+            <canvas id="summaryChart"></canvas>
+          </div>
+        </div>
+        <div id="category-breakdown-list" class="mt-4 pt-3 border-t border-slate-100 space-y-1.5 text-xs">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- 3. UNIFIED TRANSACTION LEDGER TABLE (ตารางสรุปรายการรายรับ-รายจ่ายทั้งหมดในที่เดียว) -->
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="p-4 sm:px-6 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h3 class="text-base font-bold text-slate-900">ตารางสรุปรายการ รายรับ - รายจ่าย ทั้งหมด</h3>
+          <p class="text-xs text-slate-500">แสดงรายการรายรับ (+) และรายจ่าย (&minus;) พร้อมยอดรวมสรุปท้ายตาราง</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <input id="search-input" type="text" placeholder="ค้นหาชื่อรายการ / หมวดหมู่..." class="text-xs border border-slate-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-teal-500">
+          <select id="filter-type" class="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 bg-white font-medium">
+            <option value="ALL">แสดงทั้งหมด (รายรับ + รายจ่าย)</option>
+            <option value="INCOME">เฉพาะ รายรับ (+)</option>
+            <option value="EXPENSE">เฉพาะ รายจ่าย (&minus;)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto scrollbar-thin">
+        <table class="w-full text-left border-collapse text-xs sm:text-sm">
+          <thead>
+            <tr class="bg-slate-100/80 text-slate-700 border-b border-slate-200 font-bold">
+              <th class="py-3 px-4">วันที่</th>
+              <th class="py-3 px-4">ประเภท</th>
+              <th class="py-3 px-4">รายการ / รายละเอียด</th>
+              <th class="py-3 px-4">หมวดหมู่</th>
+              <th class="py-3 px-4 text-right text-emerald-700">รายรับ (+)</th>
+              <th class="py-3 px-4 text-right text-rose-600">รายจ่าย (&minus;)</th>
+              <th class="py-3 px-4 text-right">ลบ</th>
+            </tr>
+          </thead>
+          <tbody id="ledger-tbody" class="divide-y divide-slate-100">
+            <!-- Populated by JS -->
+          </tbody>
+          <tfoot id="ledger-tfoot" class="bg-slate-50 border-t-2 border-slate-200 font-bold text-xs sm:text-sm">
+            <!-- Populated by JS -->
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Toast Notification -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 hidden">
+    <div class="bg-slate-900 text-white text-xs sm:text-sm px-4 py-3 rounded-xl shadow-lg flex items-center gap-2.5 border border-slate-700">
+      <span class="w-2 h-2 rounded-full bg-teal-400"></span>
+      <span id="toast-message">บันทึกข้อมูลเรียบร้อยแล้ว</span>
+    </div>
+  </div>
+
+  <script src="./it-ledger.js" defer></script>
+</body>
+</html>
